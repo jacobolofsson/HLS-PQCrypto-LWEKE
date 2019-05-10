@@ -291,3 +291,25 @@ __pycache__/
 /frodo976
 /frodo1344
 /objs
+
+# Xilinx
+*.elf
+.Xil
+/_sds
+/sd_card
+
+# SLX
+/silexica
+/bin
+/obj
+/hls
+/log
+/perfest
+/output
+/profiler
+.slxcmd.db
+/spec/other.mk
+/spec/build.mk
+
+# Vim
+*.swp
