@@ -55,7 +55,7 @@ AR=ar rcs
 RANLIB=ranlib
 LN=ln -s
 
-CFLAGS= -O3 -std=gnu11 -Wall -Wextra -DNIX -D $(ARCHITECTURE) -D $(USE_OPT_LEVEL) -D $(USE_GENERATION_A) -D $(USING_OPENSSL)
+CFLAGS= -O3 -std=gnu11 -Wall -Wextra -DNIX -D$(ARCHITECTURE) -D$(USE_OPT_LEVEL) -D$(USE_GENERATION_A) -D$(USING_OPENSSL)
 ifeq "$(CC)" "gcc"
 CFLAGS+= -march=native
 endif
@@ -181,6 +181,7 @@ check: tests
 
 clean:
 	rm -rf objs *.req frodo640 frodo976 frodo1344
+	rm -rf .Xil _sds *.elf
 	find . -name .DS_Store -type f -delete
 
 prettyprint:
