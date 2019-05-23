@@ -5,6 +5,11 @@ ifeq "$(CC)" "gcc"
     COMPILER=gcc
 else ifeq "$(CC)" "clang"
     COMPILER=clang
+else ifeq "$(CC)" "sdscc"
+    SDSFLAGS=-verbose -sds-pf zc706 -sds-hw AES128_ECB_enc_sch aes.c -sds-end
+    COMPILER=sdscc
+    OPT_LEVEL=FAST_GENERIC
+    USE_OPENSSL=FALSE
 endif
 
 ARCHITECTURE=_AMD64_
@@ -51,25 +56,40 @@ endif
 OPENSSL_INCLUDE_DIR=/usr/include
 OPENSSL_LIB_DIR=/usr/lib
 
+ifeq "$(CC)" "sdscc"
+#AR=sdscc $(CFLAGS) -static -o
+AR=$(XILINX_SDX)/gnu/binutils/bin/ar rcs
+RANLIB=$(XILINX_SDX)/gnu/binutils/bin/ranlib
+else
 AR=ar rcs
 RANLIB=ranlib
+endif
 LN=ln -s
 
 CFLAGS= -O3 -std=gnu11 -Wall -Wextra -DNIX -D$(ARCHITECTURE) -D$(USE_OPT_LEVEL) -D$(USE_GENERATION_A) -D$(USING_OPENSSL)
 ifeq "$(CC)" "gcc"
 CFLAGS+= -march=native
+else ifeq "$(CC)" "sdscc"
+CFLAGS+= -sds-pf zc702
+#LDFLAGS+= -lsds_lib
 endif
 ifeq "$(USE_OPENSSL)" "FALSE"
-LDFLAGS=-lm
+LDFLAGS+=-lm
 else
 CFLAGS+= -I$(OPENSSL_INCLUDE_DIR)
-LDFLAGS=-lm -L$(OPENSSL_LIB_DIR) -lssl -lcrypto
+LDFLAGS+=-lm -L$(OPENSSL_LIB_DIR) -lssl -lcrypto
 endif
 
 ifeq "$(ARCHITECTURE)" "_AMD64_"
 ifeq "$(USE_OPT_LEVEL)" "_FAST_"
 CFLAGS += -mavx2 -maes -msse2
 endif
+endif
+
+ifeq "$(CC)" "sdscc"
+CFLAGS+= -DUSE_SDSOC
+CFLAGS+= $(SDSFLAGS)
+LDFLAGS+= $(SDSFLAGS)
 endif
 
 .PHONY: all check clean prettyprint
@@ -150,9 +170,12 @@ lib1344: $(KEM_FRODO1344_OBJS) $(RAND_OBJS) $(AES_OBJS) $(AES_NI_OBJS) $(SHAKE_O
 	$(RANLIB) frodo1344/libfrodo.a
 
 tests: lib640 lib976 lib1344 tests/ds_benchmark.h
-	$(CC) $(CFLAGS) -L./frodo640 tests/test_KEM640.c -lfrodo $(LDFLAGS) -o frodo640/test_KEM $(ARM_SETTING)
-	$(CC) $(CFLAGS) -L./frodo976 tests/test_KEM976.c -lfrodo $(LDFLAGS) -o frodo976/test_KEM $(ARM_SETTING)
-	$(CC) $(CFLAGS) -L./frodo1344 tests/test_KEM1344.c -lfrodo $(LDFLAGS) -o frodo1344/test_KEM $(ARM_SETTING)
+	$(CC) -c $(CFLAGS) tests/test_KEM640.c -o objs/test_KEM640.o
+	$(CC) -c $(CFLAGS) tests/test_KEM976.c -o objs/test_KEM976.o
+	$(CC) -c $(CFLAGS) tests/test_KEM1344.c -o objs/test_KEM1344.o
+	$(CC) -L./frodo640 objs/test_KEM640.o -lfrodo $(LDFLAGS) -o frodo640/test_KEM $(ARM_SETTING)
+	$(CC) -L./frodo976 objs/test_KEM976.o -lfrodo $(LDFLAGS) -o frodo976/test_KEM $(ARM_SETTING)
+	$(CC) -L./frodo1344 objs/test_KEM1344.o -lfrodo $(LDFLAGS) -o frodo1344/test_KEM $(ARM_SETTING)
 
 lib640_for_KATs: $(KEM_FRODO640_OBJS) $(AES_OBJS) $(AES_NI_OBJS) $(SHAKE_OBJS) $(SHAKEx4_OBJS)
 	$(AR) frodo640/libfrodo_for_testing.a $^
