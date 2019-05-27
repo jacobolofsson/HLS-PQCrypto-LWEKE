@@ -4,7 +4,7 @@
 * Abstract: benchmarking/testing KEM scheme
 *********************************************************************************************/
 #ifndef KEM_TEST_ITERATIONS
-#define KEM_TEST_ITERATIONS 5
+#define KEM_TEST_ITERATIONS 1
 #endif
 #define KEM_BENCH_SECONDS     1
 
