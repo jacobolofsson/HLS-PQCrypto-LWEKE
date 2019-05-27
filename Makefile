@@ -69,9 +69,6 @@ LN=ln -s
 CFLAGS= -O3 -std=gnu11 -Wall -Wextra -DNIX -D$(ARCHITECTURE) -D$(USE_OPT_LEVEL) -D$(USE_GENERATION_A) -D$(USING_OPENSSL)
 ifeq "$(CC)" "gcc"
 CFLAGS+= -march=native
-else ifeq "$(CC)" "sdscc"
-CFLAGS+= -sds-pf zc702
-#LDFLAGS+= -lsds_lib
 endif
 ifeq "$(USE_OPENSSL)" "FALSE"
 LDFLAGS+=-lm
@@ -87,7 +84,6 @@ endif
 endif
 
 ifeq "$(CC)" "sdscc"
-CFLAGS+= -DUSE_SDSOC
 CFLAGS+= $(SDSFLAGS)
 LDFLAGS+= $(SDSFLAGS)
 endif
