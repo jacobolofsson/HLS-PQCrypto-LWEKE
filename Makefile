@@ -6,7 +6,7 @@ ifeq "$(CC)" "gcc"
 else ifeq "$(CC)" "clang"
     COMPILER=clang
 else ifeq "$(CC)" "sdscc"
-    SDSFLAGS=-verbose -sds-pf zc706 -sds-hw AES128_ECB_enc_sch aes.c -sds-end
+    SDSFLAGS=-verbose -sds-pf zc706 -sds-hw aes128_enc_c aes_c.c -sds-end
     COMPILER=sdscc
     OPT_LEVEL=FAST_GENERIC
     USE_OPENSSL=FALSE
