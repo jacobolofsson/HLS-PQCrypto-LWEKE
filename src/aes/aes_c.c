@@ -202,7 +202,7 @@ void aes256_load_schedule_c(const uint8_t* Key, uint8_t* RoundKey)
 
 // This function adds the round key to state.
 // The round key is added to the state by an XOR function.
-static void AddRoundKey(const uint8_t* RoundKey, uint8_t round)
+static void AddRoundKey(const uint8_t RoundKey[16*11], uint8_t round, state_t *state)
 {
   uint8_t i,j;
   for (i=0;i<4;++i)
@@ -286,7 +286,7 @@ static void MixColumns(state_t *state)
 
 
 // Cipher is the main function that encrypts the PlainText.
-static void Cipher(const uint8_t* RoundKey, uint32_t Nr)
+static void Cipher(const uint8_t RoundKey[16*11], uint32_t Nr, state_t *state)
 {
   uint8_t round = 0;
 
@@ -312,13 +312,15 @@ static void Cipher(const uint8_t* RoundKey, uint32_t Nr)
 }
 
 
-void aes128_enc_c(const uint8_t* input, const uint8_t* schedule, uint8_t* output)
+void aes128_enc_c(const uint8_t input[16], const uint8_t schedule[16*11], uint8_t output[16])
 {
-  memcpy(output, input, 16);
-  state_t *state = (state_t*)output;
+  state_t state;
+  memcpy(&state, input, 16);
 
   // The next function call encrypts the PlainText with the Key using AES algorithm.
-  Cipher(schedule, 10, state);
+  Cipher(schedule, 10, &state);
+
+  memcpy(output, &state, 16);
 }
 
 

@@ -28,7 +28,7 @@ void AES128_load_schedule(const uint8_t *key, uint8_t *schedule);
  * if the same schedule is used for multiple encryptions since it does
  * not have to be regenerated from the key.
  */
-void AES128_ECB_enc_sch(const uint8_t *plaintext, const size_t plaintext_len, const uint8_t *schedule, uint8_t *ciphertext);
+void AES128_ECB_enc_sch(const uint8_t *plaintext, const size_t plaintext_len, const uint8_t schedule[16*11], uint8_t *ciphertext);
 
 /**
  * Function to free a key schedule.

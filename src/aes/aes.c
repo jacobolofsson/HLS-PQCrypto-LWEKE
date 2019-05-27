@@ -22,7 +22,7 @@ void AES128_load_schedule(const uint8_t *key, uint8_t *schedule) {
 }
 
 
-static inline void aes128_enc(const uint8_t *plaintext, const uint8_t *schedule, uint8_t *ciphertext) {
+static inline void aes128_enc(const uint8_t *plaintext, const uint8_t schedule[16*11], uint8_t *ciphertext) {
 #ifdef AES_ENABLE_NI
     aes128_enc_ni(plaintext, schedule, ciphertext);
 #else
@@ -31,7 +31,7 @@ static inline void aes128_enc(const uint8_t *plaintext, const uint8_t *schedule,
 }
      
 
-void AES128_ECB_enc_sch(const uint8_t *plaintext, const size_t plaintext_len, const uint8_t *schedule, uint8_t *ciphertext) {
+void AES128_ECB_enc_sch(const uint8_t *plaintext, const size_t plaintext_len, const uint8_t schedule[16*11], uint8_t *ciphertext) {
     assert(plaintext_len % 16 == 0);
     for (size_t block = 0; block < plaintext_len / 16; block++) {
         aes128_enc(plaintext + (16 * block), schedule, ciphertext + (16 * block));
