@@ -19,7 +19,7 @@
 /*****************************************************************************/
 // state - array holding the intermediate results during decryption.
 typedef uint8_t state_t[4][4];
-static state_t* state;
+//static state_t* state;
 
 // The lookup-tables are marked const so they can be placed in read-only storage instead of RAM
 // The numbers below can be computed dynamically trading ROM for RAM -
@@ -217,7 +217,7 @@ static void AddRoundKey(const uint8_t* RoundKey, uint8_t round)
 
 // The SubBytes Function Substitutes the values in the
 // state matrix with values in an S-box.
-static void SubBytes(void)
+static void SubBytes(state_t *state)
 {
   uint8_t i, j;
   for (i = 0; i < 4; ++i)
@@ -233,7 +233,7 @@ static void SubBytes(void)
 // The ShiftRows() function shifts the rows in the state to the left.
 // Each row is shifted with different offset.
 // Offset = Row number. So the first row is not shifted.
-static void ShiftRows(void)
+static void ShiftRows(state_t *state)
 {
   uint8_t temp;
 
@@ -269,7 +269,7 @@ static uint8_t xtime(uint8_t x)
 
 
 // MixColumns function mixes the columns of the state matrix
-static void MixColumns(void)
+static void MixColumns(state_t *state)
 {
   uint8_t i;
   uint8_t Tmp,Tm,t;
@@ -291,34 +291,34 @@ static void Cipher(const uint8_t* RoundKey, uint32_t Nr)
   uint8_t round = 0;
 
   // Add the First round key to the state before starting the rounds.
-  AddRoundKey(RoundKey, 0);
+  AddRoundKey(RoundKey, 0, state);
 
   // There will be Nr rounds.
   // The first Nr-1 rounds are identical.
   // These Nr-1 rounds are executed in the loop below.
   for (round = 1; round < Nr; ++round)
   {
-    SubBytes();
-    ShiftRows();
-    MixColumns();
-    AddRoundKey(RoundKey, round);
+    SubBytes(state);
+    ShiftRows(state);
+    MixColumns(state);
+    AddRoundKey(RoundKey, round, state);
   }
 
   // The last round is given below.
   // The MixColumns function is not here in the last round.
-  SubBytes();
-  ShiftRows();
-  AddRoundKey(RoundKey, Nr);
+  SubBytes(state);
+  ShiftRows(state);
+  AddRoundKey(RoundKey, Nr, state);
 }
 
 
 void aes128_enc_c(const uint8_t* input, const uint8_t* schedule, uint8_t* output)
 {
   memcpy(output, input, 16);
-  state = (state_t*)output;
+  state_t *state = (state_t*)output;
 
   // The next function call encrypts the PlainText with the Key using AES algorithm.
-  Cipher(schedule, 10);
+  Cipher(schedule, 10, state);
 }
 
 
@@ -326,8 +326,8 @@ void aes256_enc_c(const uint8_t* input, const uint8_t* schedule, uint8_t* output
 {
   // Copy input to output, and work in-memory on output
   memcpy(output, input, 16);
-  state = (state_t*)output;
+  state_t *state = (state_t*)output;
 
   // The next function call encrypts the PlainText with the Key using AES algorithm.
-  Cipher(schedule, 14);
+  Cipher(schedule, 14, state);
 }
