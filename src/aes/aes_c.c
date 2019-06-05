@@ -314,8 +314,8 @@ static void Cipher(const uint8_t RoundKey[16*11], uint32_t Nr, state_t *state)
 
 void aes128_enc_c(const uint8_t input[16], const uint8_t schedule[16*11], uint8_t output[16])
 {
-#pragma HLS INTERFACE ap_bus port=input
-#pragma HLS INTERFACE ap_bus port=output
+#pragma HLS INTERFACE m_axi depth=16 offset=direct port=input
+#pragma HLS INTERFACE m_axi depth=16 offset=direct port=output
 
   state_t state;
   memcpy(&state, input, 16);
