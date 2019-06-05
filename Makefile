@@ -200,7 +200,7 @@ check: tests
 
 clean:
 	rm -rf objs *.req frodo640 frodo976 frodo1344
-	rm -rf .Xil _sds *.elf
+	rm -rf .Xil _sds sd_card *.elf
 	find . -name .DS_Store -type f -delete
 
 prettyprint:
