@@ -298,6 +298,7 @@ static void Cipher(const uint8_t RoundKey[16*11], uint32_t Nr, state_t *state)
   // These Nr-1 rounds are executed in the loop below.
   for (round = 1; round < Nr; ++round)
   {
+#pragma HLS pipeline
     SubBytes(state);
     ShiftRows(state);
     MixColumns(state);
@@ -314,10 +315,15 @@ static void Cipher(const uint8_t RoundKey[16*11], uint32_t Nr, state_t *state)
 
 void aes128_enc_c(const uint8_t input[16], const uint8_t schedule[16*11], uint8_t output[16])
 {
-#pragma HLS INTERFACE m_axi depth=16 offset=direct port=input
-#pragma HLS INTERFACE m_axi depth=16 offset=direct port=output
+#pragma HLS INTERFACE m_axi offset=direct port=input
+#pragma HLS INTERFACE axis offset=direct port=schedule
+#pragma HLS INTERFACE m_axi offset=direct port=output
+
+#pragma HLS dataflow
 
   state_t state;
+#pragma HLS array_partition variable=schedule complete dim=1
+#pragma HLS array_partition variable=state complete dim=0
   memcpy(&state, input, 16);
 
   // The next function call encrypts the PlainText with the Key using AES algorithm.
