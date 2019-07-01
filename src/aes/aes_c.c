@@ -50,6 +50,7 @@ static const uint8_t Rcon[11] = { 0x8d, 0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40
 
 static uint8_t getSBoxValue(uint8_t num)
 {
+#pragma HLS array_partition variable=sbox complete dim=1
   return sbox[num];
 }
 
@@ -315,21 +316,39 @@ static void Cipher(const uint8_t RoundKey[16*11], uint32_t Nr, state_t *state)
 
 void aes128_enc_c(const uint8_t input[16], const uint8_t schedule[16*11], uint8_t output[16])
 {
-#pragma HLS INTERFACE m_axi offset=direct port=input
-#pragma HLS INTERFACE axis offset=direct port=schedule
-#pragma HLS INTERFACE m_axi offset=direct port=output
+#pragma HLS INTERFACE axis port=input
+#pragma HLS INTERFACE axis port=schedule
+#pragma HLS INTERFACE axis port=output
+#pragma HLS array_reshape variable=input dim=0 complete
+#pragma HLS array_reshape variable=output dim=0 complete
+#pragma HLS array_reshape variable=schedule dim=0 cyclic factor=16
+
+  state_t state;
 
 #pragma HLS dataflow
 
-  state_t state;
-#pragma HLS array_partition variable=schedule complete dim=1
-#pragma HLS array_partition variable=state complete dim=0
-  memcpy(&state, input, 16);
+#pragma HLS array_reshape variable=state complete dim=0
+  //memcpy(&state, input, 16);
+  for(int i = 0; i < 4; ++i) {
+#pragma HLS unroll
+      for(int j = 0; j < 4; ++j) {
+#pragma HLS unroll
+          state[i][j] = input[i*4 + j];
+      }
+  }
 
   // The next function call encrypts the PlainText with the Key using AES algorithm.
   Cipher(schedule, 10, &state);
 
-  memcpy(output, &state, 16);
+  //memcpy(output, &state, 16);
+  for(int i = 0; i < 4; ++i) {
+#pragma HLS unroll
+      for(int j = 0; j < 4; ++j) {
+#pragma HLS unroll
+          output[i*4 + j] = state[i][j];
+      }
+  }
+
 }
 
 
