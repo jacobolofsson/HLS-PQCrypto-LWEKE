@@ -50,6 +50,7 @@ static const uint8_t Rcon[11] = { 0x8d, 0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40
 
 static uint8_t getSBoxValue(uint8_t num)
 {
+#pragma HLS inline
 #pragma HLS array_partition variable=sbox complete dim=1
   return sbox[num];
 }
@@ -205,11 +206,14 @@ void aes256_load_schedule_c(const uint8_t* Key, uint8_t* RoundKey)
 // The round key is added to the state by an XOR function.
 static void AddRoundKey(const uint8_t RoundKey[16*11], uint8_t round, state_t *state)
 {
+#pragma HLS inline
   uint8_t i,j;
   for (i=0;i<4;++i)
   {
+#pragma HLS unroll
     for (j = 0; j < 4; ++j)
     {
+#pragma HLS unroll
       (*state)[i][j] ^= RoundKey[round * Nb * 4 + i * Nb + j];
     }
   }
@@ -220,11 +224,14 @@ static void AddRoundKey(const uint8_t RoundKey[16*11], uint8_t round, state_t *s
 // state matrix with values in an S-box.
 static void SubBytes(state_t *state)
 {
+#pragma HLS inline
   uint8_t i, j;
   for (i = 0; i < 4; ++i)
   {
+#pragma HLS unroll
     for (j = 0; j < 4; ++j)
     {
+#pragma HLS unroll
       (*state)[j][i] = getSBoxValue((*state)[j][i]);
     }
   }
@@ -236,6 +243,7 @@ static void SubBytes(state_t *state)
 // Offset = Row number. So the first row is not shifted.
 static void ShiftRows(state_t *state)
 {
+#pragma HLS inline
   uint8_t temp;
 
   // Rotate first row 1 columns to left
@@ -265,6 +273,7 @@ static void ShiftRows(state_t *state)
 
 static uint8_t xtime(uint8_t x)
 {
+#pragma HLS inline
   return ((x<<1) ^ (((x>>7) & 1) * 0x1b));
 }
 
@@ -272,10 +281,12 @@ static uint8_t xtime(uint8_t x)
 // MixColumns function mixes the columns of the state matrix
 static void MixColumns(state_t *state)
 {
+#pragma HLS inline
   uint8_t i;
   uint8_t Tmp,Tm,t;
   for (i = 0; i < 4; ++i)
   {
+#pragma HLS unroll
     t   = (*state)[i][0];
     Tmp = (*state)[i][0] ^ (*state)[i][1] ^ (*state)[i][2] ^ (*state)[i][3] ;
     Tm  = (*state)[i][0] ^ (*state)[i][1] ; Tm = xtime(Tm);  (*state)[i][0] ^= Tm ^ Tmp ;
