@@ -5,7 +5,7 @@ ifeq "$(CC)" "gcc"
     COMPILER=gcc
 else ifeq "$(CC)" "clang"
     COMPILER=clang
-else ifeq "$(CC)" "sdscc"
+else ifneq ($(filter "sdscc" "sds++", "$(CC)"),)
     SDSFLAGS=-verbose -sds-pf zc706 -sds-hw aes128_enc_c aes_c.c -sds-end
     COMPILER=sdscc
     OPT_LEVEL=FAST_GENERIC
@@ -56,7 +56,7 @@ endif
 OPENSSL_INCLUDE_DIR=/usr/include
 OPENSSL_LIB_DIR=/usr/lib
 
-ifeq "$(CC)" "sdscc"
+ifeq "$(COMPILER)" "sdscc"
 #AR=sdscc $(CFLAGS) -static -o
 AR=$(XILINX_SDX)/gnu/binutils/bin/ar rcs
 RANLIB=$(XILINX_SDX)/gnu/binutils/bin/ranlib
@@ -83,7 +83,7 @@ CFLAGS += -mavx2 -maes -msse2
 endif
 endif
 
-ifeq "$(CC)" "sdscc"
+ifeq "$(COMPILER)" "sdscc"
 CFLAGS+= $(SDSFLAGS)
 LDFLAGS+= $(SDSFLAGS)
 endif
