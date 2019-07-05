@@ -9,6 +9,9 @@
 #include <string.h>
 #include "aes.h"
 #include "aes_local.h"
+#ifdef __SDSCC__
+#include "aes_hw.h"
+#endif
 
 
 #ifndef USE_OPENSSL
@@ -33,9 +36,13 @@ static inline void aes128_enc(const uint8_t *plaintext, const uint8_t schedule[1
 
 void AES128_ECB_enc_sch(const uint8_t *plaintext, const size_t plaintext_len, const uint8_t schedule[16*11], uint8_t *ciphertext) {
     assert(plaintext_len % 16 == 0);
+#ifdef __SDSCC__
+    AES128_enc_hw(plaintext, plaintext_len, schedule, ciphertext);
+#else
     for (size_t block = 0; block < plaintext_len / 16; block++) {
         aes128_enc(plaintext + (16 * block), schedule, ciphertext + (16 * block));
     }
+#endif
 }
 
 

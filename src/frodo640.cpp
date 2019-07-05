@@ -2,7 +2,7 @@
 * FrodoKEM: Learning with Errors Key Encapsulation
 *
 * Abstract: functions for FrodoKEM-640
-*           Instantiates "frodo_macrify.c" with the necessary matrix arithmetic functions
+*           Instantiates "frodo_macrify.cpp" with the necessary matrix arithmetic functions
 *********************************************************************************************/
 
 #include "api_frodo640.h"
@@ -32,10 +32,10 @@ uint16_t CDF_TABLE_LEN = 13;
 #define crypto_kem_enc                crypto_kem_enc_Frodo640
 #define crypto_kem_dec                crypto_kem_dec_Frodo640
 
-#include "kem.c"
-#include "noise.c"
+#include "kem.cpp"
+#include "noise.cpp"
 #if defined(USE_REFERENCE)
-#include "frodo_macrify_reference.c"
+#include "frodo_macrify_reference.cpp"
 #else
-#include "frodo_macrify.c"
+#include "frodo_macrify.cpp"
 #endif

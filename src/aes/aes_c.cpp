@@ -57,7 +57,7 @@ static uint8_t getSBoxValue(uint8_t num)
 
 
 // This function produces Nb(Nr+1) round keys. The round keys are used in each round to decrypt the states.
-void aes128_load_schedule_c(uint8_t* Key, uint8_t* RoundKey) 
+void aes128_load_schedule_c(const uint8_t* Key, uint8_t* RoundKey) 
 {
   uint32_t i, k;
   uint8_t tempa[4]; // Used for the column/row operations
@@ -204,9 +204,10 @@ void aes256_load_schedule_c(const uint8_t* Key, uint8_t* RoundKey)
 
 // This function adds the round key to state.
 // The round key is added to the state by an XOR function.
-static void AddRoundKey(const uint8_t RoundKey[16*11], uint8_t round, state_t *state)
+static void AddRoundKey(const uint8_t RoundKey[11][16], uint8_t round, state_t *state)
 {
 #pragma HLS inline
+#pragma HLS function_instantiate variable=round
   uint8_t i,j;
   for (i=0;i<4;++i)
   {
@@ -214,7 +215,7 @@ static void AddRoundKey(const uint8_t RoundKey[16*11], uint8_t round, state_t *s
     for (j = 0; j < 4; ++j)
     {
 #pragma HLS unroll
-      (*state)[i][j] ^= RoundKey[round * Nb * 4 + i * Nb + j];
+      (*state)[i][j] ^= RoundKey[round][i * Nb + j];
     }
   }
 }
@@ -298,8 +299,9 @@ static void MixColumns(state_t *state)
 
 
 // Cipher is the main function that encrypts the PlainText.
-static void Cipher(const uint8_t RoundKey[16*11], uint32_t Nr, state_t *state)
+void Cipher(const uint8_t RoundKey[11][16], uint32_t Nr, state_t *state)
 {
+#pragma HLS inline
   uint8_t round = 0;
 
   // Add the First round key to the state before starting the rounds.
@@ -310,7 +312,7 @@ static void Cipher(const uint8_t RoundKey[16*11], uint32_t Nr, state_t *state)
   // These Nr-1 rounds are executed in the loop below.
   for (round = 1; round < Nr; ++round)
   {
-#pragma HLS pipeline
+#pragma HLS unroll
     SubBytes(state);
     ShiftRows(state);
     MixColumns(state);
@@ -327,39 +329,12 @@ static void Cipher(const uint8_t RoundKey[16*11], uint32_t Nr, state_t *state)
 
 void aes128_enc_c(const uint8_t input[16], const uint8_t schedule[16*11], uint8_t output[16])
 {
-#pragma HLS INTERFACE axis port=input
-#pragma HLS INTERFACE axis port=schedule
-#pragma HLS INTERFACE axis port=output
-#pragma HLS array_reshape variable=input dim=0 complete
-#pragma HLS array_reshape variable=output dim=0 complete
-#pragma HLS array_reshape variable=schedule dim=0 cyclic factor=16
-
-  state_t state;
-
-#pragma HLS dataflow
-
-#pragma HLS array_reshape variable=state complete dim=0
-  //memcpy(&state, input, 16);
-  for(int i = 0; i < 4; ++i) {
-#pragma HLS unroll
-      for(int j = 0; j < 4; ++j) {
-#pragma HLS unroll
-          state[i][j] = input[i*4 + j];
-      }
-  }
+  // Copy input to output, and work in-memory on output
+  memcpy(output, input, 16);
+  state_t *state = (state_t*)output;
 
   // The next function call encrypts the PlainText with the Key using AES algorithm.
-  Cipher(schedule, 10, &state);
-
-  //memcpy(output, &state, 16);
-  for(int i = 0; i < 4; ++i) {
-#pragma HLS unroll
-      for(int j = 0; j < 4; ++j) {
-#pragma HLS unroll
-          output[i*4 + j] = state[i][j];
-      }
-  }
-
+//  Cipher(schedule, 10, state);
 }
 
 
@@ -370,5 +345,5 @@ void aes256_enc_c(const uint8_t* input, const uint8_t* schedule, uint8_t* output
   state_t *state = (state_t*)output;
 
   // The next function call encrypts the PlainText with the Key using AES algorithm.
-  Cipher(schedule, 14, state);
+//  Cipher(schedule, 14, state);
 }

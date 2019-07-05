@@ -6,7 +6,8 @@ ifeq "$(CC)" "gcc"
 else ifeq "$(CC)" "clang"
     COMPILER=clang
 else ifneq ($(filter "sdscc" "sds++", "$(CC)"),)
-    SDSFLAGS=-verbose -sds-pf zc706 -sds-hw aes128_enc_c aes_c.c -sds-end
+    SDSFLAGS=-verbose -sds-pf zc706 -sds-hw aes128_enc_hw src/aes/aes_hw.cpp -files src/aes/aes_c.cpp -sds-end
+    CXX=sds++
     COMPILER=sdscc
     OPT_LEVEL=FAST_GENERIC
     USE_OPENSSL=FALSE
@@ -66,7 +67,8 @@ RANLIB=ranlib
 endif
 LN=ln -s
 
-CFLAGS= -O3 -std=gnu11 -Wall -Wextra -DNIX -D$(ARCHITECTURE) -D$(USE_OPT_LEVEL) -D$(USE_GENERATION_A) -D$(USING_OPENSSL)
+#CFLAGS= -O3 -std=gnu11 -Wall -Wextra -DNIX -D$(ARCHITECTURE) -D$(USE_OPT_LEVEL) -D$(USE_GENERATION_A) -D$(USING_OPENSSL)
+CFLAGS= -O3 -Wall -Wextra -DNIX -D$(ARCHITECTURE) -D$(USE_OPT_LEVEL) -D$(USE_GENERATION_A) -D$(USING_OPENSSL)
 ifeq "$(CC)" "gcc"
 CFLAGS+= -march=native
 endif
@@ -96,15 +98,19 @@ objs/%.o: src/%.c
 	@mkdir -p $(@D)
 	$(CC) -c  $(CFLAGS) $< -o $@
 
-objs/frodo640.o: src/frodo640.c
+objs/%.o: src/%.cpp
+	@mkdir -p $(@D)
+	$(CXX) -c  $(CFLAGS) $< -o $@
+
+objs/frodo640.o: src/frodo640.cpp
 	@mkdir -p $(@D)
 	$(CC) -c  $(CFLAGS) $< -o $@
 
-objs/frodo976.o: src/frodo976.c
+objs/frodo976.o: src/frodo976.cpp
 	@mkdir -p $(@D)
 	$(CC) -c  $(CFLAGS) $< -o $@
 
-objs/frodo1344.o: src/frodo1344.c
+objs/frodo1344.o: src/frodo1344.cpp
 	@mkdir -p $(@D)
 	$(CC) -c  $(CFLAGS) $< -o $@
 
@@ -115,18 +121,22 @@ RAND_OBJS := objs/random/random.o
 # KEM_FRODO
 KEM_FRODO640_OBJS := $(addprefix objs/, frodo640.o util.o)
 KEM_FRODO640_HEADERS := $(addprefix src/, api_frodo640.h config.h frodo_macrify.h)
-$(KEM_FRODO640_OBJS): $(KEM_FRODO640_HEADERS) $(addprefix src/, kem.c noise.c util.c)
+$(KEM_FRODO640_OBJS): $(KEM_FRODO640_HEADERS) $(addprefix src/, kem.cpp noise.cpp util.cpp)
 
 KEM_FRODO976_OBJS := $(addprefix objs/, frodo976.o util.o)
 KEM_FRODO976_HEADERS := $(addprefix src/, api_frodo976.h config.h frodo_macrify.h)
-$(KEM_FRODO976_OBJS): $(KEM_FRODO976_HEADERS) $(addprefix src/, kem.c noise.c util.c)
+$(KEM_FRODO976_OBJS): $(KEM_FRODO976_HEADERS) $(addprefix src/, kem.cpp noise.cpp util.cpp)
 
 KEM_FRODO1344_OBJS := $(addprefix objs/, frodo1344.o util.o)
 KEM_FRODO1344_HEADERS := $(addprefix src/, api_frodo1344.h config.h frodo_macrify.h)
-$(KEM_FRODO1344_OBJS): $(KEM_FRODO1344_HEADERS) $(addprefix src/, kem.c noise.c util.c)
+$(KEM_FRODO1344_OBJS): $(KEM_FRODO1344_HEADERS) $(addprefix src/, kem.cpp noise.cpp util.cpp)
 
 # AES
+ifeq "$(COMPILER)" "sdscc"
+AES_OBJS := $(addprefix objs/aes/, aes.o aes_c.o aes_hw.o)
+else
 AES_OBJS := $(addprefix objs/aes/, aes.o aes_c.o)
+endif
 AES_HEADERS := $(addprefix src/aes/, aes.h)
 $(AES_OBJS): $(AES_HEADERS)
 
@@ -166,9 +176,9 @@ lib1344: $(KEM_FRODO1344_OBJS) $(RAND_OBJS) $(AES_OBJS) $(AES_NI_OBJS) $(SHAKE_O
 	$(RANLIB) frodo1344/libfrodo.a
 
 tests: lib640 lib976 lib1344 tests/ds_benchmark.h
-	$(CC) -c $(CFLAGS) tests/test_KEM640.c -o objs/test_KEM640.o
-	$(CC) -c $(CFLAGS) tests/test_KEM976.c -o objs/test_KEM976.o
-	$(CC) -c $(CFLAGS) tests/test_KEM1344.c -o objs/test_KEM1344.o
+	$(CC) -c $(CFLAGS) tests/test_KEM640.cpp -o objs/test_KEM640.o
+	$(CC) -c $(CFLAGS) tests/test_KEM976.cpp -o objs/test_KEM976.o
+	$(CC) -c $(CFLAGS) tests/test_KEM1344.cpp -o objs/test_KEM1344.o
 	$(CC) -L./frodo640 objs/test_KEM640.o -lfrodo $(LDFLAGS) -o frodo640/test_KEM $(ARM_SETTING)
 	$(CC) -L./frodo976 objs/test_KEM976.o -lfrodo $(LDFLAGS) -o frodo976/test_KEM $(ARM_SETTING)
 	$(CC) -L./frodo1344 objs/test_KEM1344.o -lfrodo $(LDFLAGS) -o frodo1344/test_KEM $(ARM_SETTING)
@@ -187,13 +197,13 @@ lib1344_for_KATs: $(KEM_FRODO1344_OBJS) $(AES_OBJS) $(AES_NI_OBJS) $(SHAKE_OBJS)
 
 KATS: lib640_for_KATs lib976_for_KATs lib1344_for_KATs
 ifeq "$(GENERATION_A)" "SHAKE128"
-	$(CC) $(CFLAGS) -L./frodo640 tests/PQCtestKAT_kem640_shake.c tests/rng.c -lfrodo_for_testing $(LDFLAGS) -o frodo640/PQCtestKAT_kem_shake $(ARM_SETTING)
-	$(CC) $(CFLAGS) -L./frodo976 tests/PQCtestKAT_kem976_shake.c tests/rng.c -lfrodo_for_testing $(LDFLAGS) -o frodo976/PQCtestKAT_kem_shake $(ARM_SETTING)
-	$(CC) $(CFLAGS) -L./frodo1344 tests/PQCtestKAT_kem1344_shake.c tests/rng.c -lfrodo_for_testing $(LDFLAGS) -o frodo1344/PQCtestKAT_kem_shake $(ARM_SETTING)
+	$(CC) $(CFLAGS) -L./frodo640 tests/PQCtestKAT_kem640_shake.cpp tests/rng.cpp -lfrodo_for_testing $(LDFLAGS) -o frodo640/PQCtestKAT_kem_shake $(ARM_SETTING)
+	$(CC) $(CFLAGS) -L./frodo976 tests/PQCtestKAT_kem976_shake.cpp tests/rng.cpp -lfrodo_for_testing $(LDFLAGS) -o frodo976/PQCtestKAT_kem_shake $(ARM_SETTING)
+	$(CC) $(CFLAGS) -L./frodo1344 tests/PQCtestKAT_kem1344_shake.cpp tests/rng.cpp -lfrodo_for_testing $(LDFLAGS) -o frodo1344/PQCtestKAT_kem_shake $(ARM_SETTING)
 else
-	$(CC) $(CFLAGS) -L./frodo640 tests/PQCtestKAT_kem640.c tests/rng.c -lfrodo_for_testing $(LDFLAGS) -o frodo640/PQCtestKAT_kem $(ARM_SETTING)
-	$(CC) $(CFLAGS) -L./frodo976 tests/PQCtestKAT_kem976.c tests/rng.c -lfrodo_for_testing $(LDFLAGS) -o frodo976/PQCtestKAT_kem $(ARM_SETTING)
-	$(CC) $(CFLAGS) -L./frodo1344 tests/PQCtestKAT_kem1344.c tests/rng.c -lfrodo_for_testing $(LDFLAGS) -o frodo1344/PQCtestKAT_kem $(ARM_SETTING)
+	$(CC) $(CFLAGS) -L./frodo640 tests/PQCtestKAT_kem640.cpp tests/rng.cpp -lfrodo_for_testing $(LDFLAGS) -o frodo640/PQCtestKAT_kem $(ARM_SETTING)
+	$(CC) $(CFLAGS) -L./frodo976 tests/PQCtestKAT_kem976.cpp tests/rng.cpp -lfrodo_for_testing $(LDFLAGS) -o frodo976/PQCtestKAT_kem $(ARM_SETTING)
+	$(CC) $(CFLAGS) -L./frodo1344 tests/PQCtestKAT_kem1344.cpp tests/rng.cpp -lfrodo_for_testing $(LDFLAGS) -o frodo1344/PQCtestKAT_kem $(ARM_SETTING)
 endif
 
 check: tests
@@ -204,4 +214,4 @@ clean:
 	find . -name .DS_Store -type f -delete
 
 prettyprint:
-	astyle --style=java --indent=tab --pad-header --pad-oper --align-pointer=name --align-reference=name --suffix=none src/*.h src/*/*.h src/*/*.c
+	astyle --style=java --indent=tab --pad-header --pad-oper --align-pointer=name --align-reference=name --suffix=none src/*.h src/*/*.h src/*/*.cpp
