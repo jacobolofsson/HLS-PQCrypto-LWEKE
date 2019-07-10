@@ -16,6 +16,9 @@
 #if defined(USE_AVX2)
     #include <immintrin.h>
 #endif
+#ifdef __SDSCC__
+#include <sds_lib.h>
+#endif
 
 
 int frodo_mul_add_as_plus_e(uint16_t *out, const uint16_t *s, const uint16_t *e, const uint8_t *seed_A) 
@@ -23,16 +26,36 @@ int frodo_mul_add_as_plus_e(uint16_t *out, const uint16_t *s, const uint16_t *e,
   // Inputs: s, e (N x N_BAR)
   // Output: out = A*s + e (N x N_BAR)
     int i, j, k;
+#ifdef __SDSCC__
+    size_t a_buffer_len = 4 * PARAMS_N * sizeof(int16_t);
+    size_t a_block_size = 16 * 256;
+    size_t rem = a_buffer_len % a_block_size;
+    if (rem > 0) {
+        a_buffer_len += a_block_size - rem;
+    }
+    int16_t *a_row = (int16_t*)sds_alloc(a_buffer_len);       
+    memset(a_row, 0, a_buffer_len);
+#else
     ALIGN_HEADER(32) int16_t a_row[4*PARAMS_N] ALIGN_FOOTER(32) = {0};
+#endif
 
     for (i = 0; i < (PARAMS_N*PARAMS_NBAR); i += 2) {    
         *((uint32_t*)&out[i]) = *((uint32_t*)&e[i]);
     }    
     
 #if defined(USE_AES128_FOR_A)
+#ifdef __SDSCC__
+    int16_t *a_row_temp = (int16_t*)sds_alloc(a_buffer_len);       
+    memset(a_row_temp, 0, a_buffer_len);
+#else
     int16_t a_row_temp[4*PARAMS_N] = {0};                       // Take four lines of A at once       
+#endif
 #if !defined(USE_OPENSSL)
+#ifdef __SDSCC__
+    uint8_t *aes_key_schedule = (uint8_t*)sds_alloc(16*11);       
+#else
     uint8_t aes_key_schedule[16*11];
+#endif
     AES128_load_schedule(seed_A, aes_key_schedule);   
 #else
     EVP_CIPHER_CTX *aes_key_schedule;    
@@ -119,6 +142,11 @@ int frodo_mul_add_as_plus_e(uint16_t *out, const uint16_t *s, const uint16_t *e,
 #if defined(USE_AES128_FOR_A)
     AES128_free_schedule(aes_key_schedule);
 #endif
+#ifdef __SDSCC__
+    sds_free(a_row);
+    sds_free(a_row_temp);
+    sds_free(aes_key_schedule);
+#endif
     return 1;
 }
 
@@ -135,11 +163,32 @@ int frodo_mul_add_sa_plus_e(uint16_t *out, const uint16_t *s, const uint16_t *e,
 
 #if defined(USE_AES128_FOR_A)
     int k;
+#ifdef __SDSCC__
+    size_t a_buffer_len = PARAMS_N * PARAMS_STRIPE_STEP * sizeof(int16_t);
+    size_t a_block_size = 16 * 256;
+    size_t rem = a_buffer_len % a_block_size;
+    if (rem > 0) {
+        a_buffer_len += a_block_size - rem;
+    }
+    int16_t *a_cols = (int16_t*)sds_alloc(a_buffer_len);       
+    memset(a_cols, 0, a_buffer_len);
+    int16_t *a_cols_temp = (int16_t*)sds_alloc(a_buffer_len);       
+    memset(a_cols_temp, 0, a_buffer_len);
+    uint8_t *aes_key_schedule = (uint8_t*)sds_alloc(16*11);       
+//    if (!a_cols) handleErrors();
+//    if (!a_cols_temp) handleErrors();
+//    if (!aes_key_schedule) handleErrors();
+#else
     uint16_t a_cols[PARAMS_N*PARAMS_STRIPE_STEP] = {0};
+#endif
     ALIGN_HEADER(32) uint16_t a_cols_t[PARAMS_N*PARAMS_STRIPE_STEP] ALIGN_FOOTER(32) = {0};
+#ifndef __SDSCC__
     uint16_t a_cols_temp[PARAMS_N*PARAMS_STRIPE_STEP] = {0};       
+#endif
 #if !defined(USE_OPENSSL)
+#ifndef __SDSCC__
     uint8_t aes_key_schedule[16*11];
+#endif
     AES128_load_schedule(seed_A, aes_key_schedule);  
 #else
     EVP_CIPHER_CTX *aes_key_schedule;    
@@ -309,6 +358,11 @@ int frodo_mul_add_sa_plus_e(uint16_t *out, const uint16_t *s, const uint16_t *e,
         }
     }
 #endif
+#endif
+#ifdef __SDSCC__
+    sds_free(a_cols);
+    sds_free(a_cols_temp);
+    sds_free(aes_key_schedule);
 #endif
     
     return 1;
