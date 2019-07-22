@@ -5,6 +5,15 @@ ifeq "$(CC)" "gcc"
     COMPILER=gcc
 else ifeq "$(CC)" "clang"
     COMPILER=clang
+else ifneq ($(filter "sdscc" "sds++", "$(CC)"),)
+    EMULATION_FLAGS=-emulation debug
+    HW_FUNC_FLAGS=-sds-hw aes128_enc_c src/aes/aes_c.c -sds-end
+    SDSFLAGS=-verbose -sds-pf zc706 $(HW_FUNC_FLAGS) $(EMULATION_FLAGS)
+    CXX=sds++
+    COMPILER=sdscc
+    OPT_LEVEL=FAST_GENERIC
+    USE_OPENSSL=FALSE
+    ARCH=ARM
 endif
 
 ARCHITECTURE=_AMD64_
@@ -51,11 +60,16 @@ endif
 OPENSSL_INCLUDE_DIR=/usr/include
 OPENSSL_LIB_DIR=/usr/lib
 
+ifeq "$(COMPILER)" "sdscc"
+AR=$(XILINX_SDX)/gnu/binutils/bin/ar rcs
+RANLIB=$(XILINX_SDX)/gnu/binutils/bin/ranlib
+else
 AR=ar rcs
 RANLIB=ranlib
+endif
 LN=ln -s
 
-CFLAGS= -O3 -std=gnu11 -Wall -Wextra -DNIX -D $(ARCHITECTURE) -D $(USE_OPT_LEVEL) -D $(USE_GENERATION_A) -D $(USING_OPENSSL)
+CFLAGS= -O3 -std=gnu11 -Wall -Wextra -DNIX -D$(ARCHITECTURE) -D$(USE_OPT_LEVEL) -D$(USE_GENERATION_A) -D$(USING_OPENSSL)
 ifeq "$(CC)" "gcc"
 CFLAGS+= -march=native
 endif
@@ -70,6 +84,11 @@ ifeq "$(ARCHITECTURE)" "_AMD64_"
 ifeq "$(USE_OPT_LEVEL)" "_FAST_"
 CFLAGS += -mavx2 -maes -msse2
 endif
+endif
+
+ifeq "$(COMPILER)" "sdscc"
+CFLAGS+= $(SDSFLAGS)
+LDFLAGS+= $(SDSFLAGS)
 endif
 
 .PHONY: all check clean prettyprint
