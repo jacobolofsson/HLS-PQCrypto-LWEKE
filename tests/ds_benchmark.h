@@ -49,6 +49,10 @@
 #include <math.h>
 
 
+#ifdef __SDSCC__
+#include <sds_lib.h>
+#endif
+
 #if (OS_TARGET == OS_WIN)
 #include <Windows.h>
 
@@ -73,7 +77,9 @@ int gettimeofday(struct timeval *tp, struct timezone *tzp) {
 
 
 static uint64_t rdtsc(void) {
-#if (OS_TARGET == OS_WIN)
+#ifdef __SDSCC__
+    return sds_clock_counter();
+#elif (OS_TARGET == OS_WIN)
 	return __rdtsc();
 #elif (OS_TARGET == OS_NIX) && (TARGET == TARGET_AMD64 || TARGET == TARGET_x86)
 	uint64_t x;
