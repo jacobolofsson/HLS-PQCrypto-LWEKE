@@ -4,8 +4,8 @@
 * Abstract: benchmarking/testing KEM scheme
 *********************************************************************************************/
 
-#define KEM_TEST_ITERATIONS 100
-#define KEM_BENCH_SECONDS     1
+#define KEM_TEST_ITERATIONS 1
+#define KEM_BENCH_SECONDS     0
 
 
 static int kem_test(const char *named_parameters, int iterations) 
