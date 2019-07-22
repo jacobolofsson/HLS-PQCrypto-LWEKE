@@ -313,11 +313,15 @@ void Cipher(state_t *state, const uint8_t RoundKey[176], uint32_t Nr)
 
 void aes128_enc_c(const uint8_t input[16], const uint8_t schedule[176], uint8_t output[16])
 {
-  memcpy(output, input, 16);
-  state = (state_t*)output;
+#pragma HLS interface port=input m_axi offset=direct
+#pragma HLS interface port=output m_axi offset=direct
+  state_t state;
+  memcpy(&state, input, 16);
 
   // The next function call encrypts the PlainText with the Key using AES algorithm.
   Cipher(&state, schedule, 10);
+
+  memcpy(output, &state, 16);
 }
 
 
