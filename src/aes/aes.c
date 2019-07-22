@@ -22,7 +22,7 @@ void AES128_load_schedule(const uint8_t *key, uint8_t *schedule) {
 }
 
 
-static inline void aes128_enc(const uint8_t *plaintext, const uint8_t *schedule, uint8_t *ciphertext) {
+void aes128_enc(const uint8_t plaintext[16], const uint8_t schedule[176], uint8_t ciphertext[16]) {
 #ifdef AES_ENABLE_NI
     aes128_enc_ni(plaintext, schedule, ciphertext);
 #else

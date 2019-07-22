@@ -16,7 +16,7 @@ void aes256_enc_ni(const uint8_t *plaintext, const uint8_t *schedule, uint8_t *c
 
 void aes128_load_schedule_c(const uint8_t *key, uint8_t *schedule);
 void aes256_load_schedule_c(const uint8_t *key, uint8_t *schedule);
-void aes128_enc_c(const uint8_t *plaintext, const uint8_t *schedule, uint8_t *ciphertext);
+void aes128_enc_c(const uint8_t plaintext[16], const uint8_t schedule[176], uint8_t ciphertext[16]);
 void aes256_enc_c(const uint8_t *plaintext, const uint8_t *schedule, uint8_t *ciphertext);
 
 #endif
