@@ -313,11 +313,21 @@ void Cipher(state_t *state, const uint8_t RoundKey[176], uint32_t Nr)
 
 void aes128_enc_c(const uint8_t input[16], const uint8_t schedule[176], uint8_t output[16])
 {
-  memcpy(output, input, 16);
-  state = (state_t*)output;
+  state_t state;
+  for(int i = 0; i < 4; ++i) {
+	  for(int j = 0; j < 4; ++j) {
+		  state[i][j] = input[i*4 + j];
+	  }
+  }
 
   // The next function call encrypts the PlainText with the Key using AES algorithm.
   Cipher(&state, schedule, 10);
+
+  for(int i = 0; i < 4; ++i) {
+  	  for(int j = 0; j < 4; ++j) {
+  		  output[i*4 + j] = state[i][j];
+  	  }
+    }
 }
 
 
