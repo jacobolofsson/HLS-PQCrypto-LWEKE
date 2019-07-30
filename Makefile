@@ -6,9 +6,9 @@ ifeq "$(CC)" "gcc"
 else ifeq "$(CC)" "clang"
     COMPILER=clang
 else ifneq ($(filter "sdscc" "sds++", "$(CC)"),)
-    EMULATION_FLAGS=-emulation debug
-    HW_FUNC_FLAGS=-sds-hw aes128_enc_c src/aes/aes_c.c -sds-end
-    SDSFLAGS=-verbose -sds-pf zc706 $(HW_FUNC_FLAGS) $(EMULATION_FLAGS)
+    EMULATION_FLAGS=-emulation debug -g
+    HW_FUNC_FLAGS=-sds-hw aes128_enc_hw src/aes/aes_c.c -sds-end
+    SDSFLAGS=-verbose -sds-pf zc706 -sds-sys-config linux $(HW_FUNC_FLAGS) $(EMULATION_FLAGS)
     CXX=sds++
     COMPILER=sdscc
     OPT_LEVEL=FAST_GENERIC
@@ -61,11 +61,12 @@ OPENSSL_INCLUDE_DIR=/usr/include
 OPENSSL_LIB_DIR=/usr/lib
 
 ifeq "$(COMPILER)" "sdscc"
-AR=$(XILINX_SDX)/gnu/binutils/bin/ar rcs
-RANLIB=$(XILINX_SDX)/gnu/binutils/bin/ranlib
+    GNUTOOLS=arm-linux-gnueabihf-
+    AR=$(GNUTOOLS)ar rcs
+    RANLIB=$(GNUTOOLS)ranlib
 else
-AR=ar rcs
-RANLIB=ranlib
+    AR=ar rcs
+    RANLIB=ranlib
 endif
 LN=ln -s
 
@@ -198,8 +199,13 @@ endif
 
 check: tests
 
+sdsoc_target: $(KEM_FRODO640_OBJS) $(RAND_OBJS) $(AES_OBJS) $(AES_NI_OBJS) $(SHAKE_OBJS) $(SHAKEx4_OBJS)
+	$(CC) -c $(CFLAGS) tests/test_KEM640.c -o objs/test_KEM640.o
+	$(CC) $^ objs/test_KEM640.o $(LDFLAGS) $(SDSFLAGS) -o test_KEM $(ARM_SETTING)
+
 clean:
 	rm -rf objs *.req frodo640 frodo976 frodo1344
+	rm -rf _sds sd_card .Xil
 	find . -name .DS_Store -type f -delete
 
 prettyprint:
