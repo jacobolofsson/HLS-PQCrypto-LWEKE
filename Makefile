@@ -6,9 +6,8 @@ ifeq "$(CC)" "gcc"
 else ifeq "$(CC)" "clang"
     COMPILER=clang
 else ifneq ($(filter "sdscc" "sds++", "$(CC)"),)
-    EMULATION_FLAGS=-emulation debug -g
     HW_FUNC_FLAGS=-sds-hw aes128_enc_hw src/aes/aes_c.c -sds-end
-    SDSFLAGS=-verbose -sds-pf zc706 -sds-sys-config linux $(HW_FUNC_FLAGS) $(EMULATION_FLAGS)
+    SDSFLAGS=-verbose -sds-pf zc706 -sds-sys-config linux $(HW_FUNC_FLAGS) $(EXTRA_SDSFLAGS)
     CXX=sds++
     COMPILER=sdscc
     OPT_LEVEL=FAST_GENERIC
