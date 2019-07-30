@@ -13,6 +13,21 @@
 #include "../config.h"
 
 
+#define BLOCK_BYTES 700*16
+#define PADDED_BLOCK_SIZE(x) ((x) + BLOCK_BYTES)
+
+#ifdef DISABLE_ALL_PRAGMAS
+#define DISABLE_NEW_TOP 1
+#define DISABLE_TOP_DATAFLOW 1
+#define DISABLE_PRAGMAS_TOP 1
+#define DISABLE_PRAGMAS_INIT 1
+#define DISABLE_PRAGMAS_INIT_PIPELINE 1
+#define DISABLE_PRAGMAS_ARRAY_P 1
+#define DISABLE_PRAGMAS_INTERFACE 1
+#define DISABLE_PRAGMAS_RESHAPE 1
+#define DISABLE_PRAGMAS_INLINE 1
+#endif
+
 #ifndef USE_OPENSSL
 /**
  * Function to fill a key schedule given an initial key.

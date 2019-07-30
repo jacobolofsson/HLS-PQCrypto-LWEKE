@@ -23,6 +23,7 @@ void AES128_load_schedule(const uint8_t *key, uint8_t *schedule) {
 
 
 void aes128_enc(const uint8_t plaintext[16], const uint8_t schedule[176], uint8_t ciphertext[16]) {
+#pragma HLS inline
 #ifdef AES_ENABLE_NI
     aes128_enc_ni(plaintext, schedule, ciphertext);
 #else
@@ -30,12 +31,37 @@ void aes128_enc(const uint8_t plaintext[16], const uint8_t schedule[176], uint8_
 #endif
 }
      
+#ifndef DISABLE_NEW_TOP
+#include "aes_hw.h"
+#ifndef DISABLE_SDS_INTERFACE
+void AES128_enc_hw(const uint8_t *plaintext, const size_t plaintext_len, const uint8_t schedule_p[176], uint8_t *ciphertext) {
+#else
+void AES128_enc_hw(const uint8_t plaintext[BLOCK_BYTES], const size_t plaintext_len, const uint8_t schedule_p[176], uint8_t ciphertext[BLOCK_BYTES]) {
+#endif
+
+    aes128_enc_hw(plaintext, plaintext_len, schedule_p, ciphertext);
+}
+#endif
 
 void AES128_ECB_enc_sch(const uint8_t *plaintext, const size_t plaintext_len, const uint8_t *schedule, uint8_t *ciphertext) {
     assert(plaintext_len % 16 == 0);
+#ifndef DISABLE_NEW_TOP
+#ifndef DISABLE_SDS_INTERFACE
+    AES128_enc_hw(plaintext, plaintext_len, schedule, ciphertext);
+#else
+    size_t block = 0;
+    for (; block < plaintext_len - BLOCK_BYTES; block += BLOCK_BYTES) {
+        AES128_enc_hw(plaintext + block, BLOCK_BYTES, schedule, ciphertext + block);
+    }
+    if( block < plaintext_len) {
+        AES128_enc_hw(plaintext + block, plaintext_len - block, schedule, ciphertext + block);
+    }
+#endif
+#else
     for (size_t block = 0; block < plaintext_len / 16; block++) {
         aes128_enc(plaintext + (16 * block), schedule, ciphertext + (16 * block));
     }
+#endif
 }
 
 

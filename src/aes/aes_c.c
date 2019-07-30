@@ -49,12 +49,18 @@ static const uint8_t Rcon[11] = { 0x8d, 0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40
 
 static uint8_t getSBoxValue(uint8_t num)
 {
+#ifndef DISABLE_PRAGMAS_INIT
+#pragma HLS inline
+#endif
+#ifndef DISABLE_PRAGMAS_ARRAY_P
+#pragma HLS array_partition variable=sbox complete
+#endif
   return sbox[num];
 }
 
 
 // This function produces Nb(Nr+1) round keys. The round keys are used in each round to decrypt the states.
-void aes128_load_schedule_c(uint8_t* Key, uint8_t* RoundKey) 
+void aes128_load_schedule_c(const uint8_t* Key, uint8_t* RoundKey) 
 {
   uint32_t i, k;
   uint8_t tempa[4]; // Used for the column/row operations
@@ -203,11 +209,20 @@ void aes256_load_schedule_c(const uint8_t* Key, uint8_t* RoundKey)
 // The round key is added to the state by an XOR function.
 static void AddRoundKey(state_t *state, const uint8_t RoundKey[176], uint8_t round)
 {
+#ifndef DISABLE_PRAGMAS_INLINE
+#pragma HLS inline
+#endif
   uint8_t i,j;
   for (i=0;i<4;++i)
   {
+#ifndef DISABLE_PRAGMAS_INIT
+#pragma HLS unroll
+#endif
     for (j = 0; j < 4; ++j)
     {
+#ifndef DISABLE_PRAGMAS_INIT
+#pragma HLS unroll
+#endif
       (*state)[i][j] ^= RoundKey[round * Nb * 4 + i * Nb + j];
     }
   }
@@ -218,11 +233,20 @@ static void AddRoundKey(state_t *state, const uint8_t RoundKey[176], uint8_t rou
 // state matrix with values in an S-box.
 static void SubBytes(state_t *state)
 {
+#ifndef DISABLE_PRAGMAS_INLINE
+#pragma HLS inline
+#endif
   uint8_t i, j;
   for (i = 0; i < 4; ++i)
   {
+#ifndef DISABLE_PRAGMAS_INIT
+#pragma HLS unroll
+#endif
     for (j = 0; j < 4; ++j)
     {
+#ifndef DISABLE_PRAGMAS_INIT
+#pragma HLS unroll
+#endif
       (*state)[j][i] = getSBoxValue((*state)[j][i]);
     }
   }
@@ -234,6 +258,9 @@ static void SubBytes(state_t *state)
 // Offset = Row number. So the first row is not shifted.
 static void ShiftRows(state_t *state)
 {
+#ifndef DISABLE_PRAGMAS_INLINE
+#pragma HLS inline
+#endif
   uint8_t temp;
 
   // Rotate first row 1 columns to left
@@ -263,6 +290,9 @@ static void ShiftRows(state_t *state)
 
 static uint8_t xtime(uint8_t x)
 {
+#ifndef DISABLE_PRAGMAS_INIT
+#pragma HLS inline
+#endif
   return ((x<<1) ^ (((x>>7) & 1) * 0x1b));
 }
 
@@ -270,10 +300,16 @@ static uint8_t xtime(uint8_t x)
 // MixColumns function mixes the columns of the state matrix
 static void MixColumns(state_t *state)
 {
+#ifndef DISABLE_PRAGMAS_INLINE
+#pragma HLS inline
+#endif
   uint8_t i;
   uint8_t Tmp,Tm,t;
   for (i = 0; i < 4; ++i)
   {
+#ifndef DISABLE_PRAGMAS_INIT
+#pragma HLS unroll
+#endif
     t   = (*state)[i][0];
     Tmp = (*state)[i][0] ^ (*state)[i][1] ^ (*state)[i][2] ^ (*state)[i][3] ;
     Tm  = (*state)[i][0] ^ (*state)[i][1] ; Tm = xtime(Tm);  (*state)[i][0] ^= Tm ^ Tmp ;
@@ -288,6 +324,11 @@ static void MixColumns(state_t *state)
 void Cipher(state_t *state, const uint8_t RoundKey[176], uint32_t Nr)
 {
   uint8_t round = 0;
+#ifndef DISABLE_PRAGMAS_ARRAY_P
+#pragma HLS array_partition variable=state complete dim=0
+#pragma HLS array_partition variable=RoundKey complete
+//#pragma HLS array_reshape variable=RoundKey cyclic factor=16
+#endif
 
   // Add the First round key to the state before starting the rounds.
   AddRoundKey(state, RoundKey, 0);
@@ -297,6 +338,9 @@ void Cipher(state_t *state, const uint8_t RoundKey[176], uint32_t Nr)
   // These Nr-1 rounds are executed in the loop below.
   for (round = 1; round < Nr; ++round)
   {
+#ifndef DISABLE_PRAGMAS_INIT_PIPELINE
+#pragma HLS pipeline
+#endif
     SubBytes(state);
     ShiftRows(state);
     MixColumns(state);
@@ -311,17 +355,43 @@ void Cipher(state_t *state, const uint8_t RoundKey[176], uint32_t Nr)
 }
 
 
-void aes128_enc_c(const uint8_t input[16], const uint8_t schedule[176], uint8_t output[16])
+void aes128_enc_c(const uint8_t input[16], const uint8_t schedule_p[176], uint8_t output[16])
 {
+#ifndef DISABLE_NEW_TOP
+#pragma HLS inline
+#else
+#ifndef DISABLE_PRAGMAS_INTERFACE
+#pragma HLS interface port=input m_axi offset=direct 
+#pragma HLS interface port=output m_axi offset=direct
+#pragma HLS interface port=schedule_p m_axi offset=direct
+#else
 #pragma HLS interface port=input m_axi offset=direct
 #pragma HLS interface port=output m_axi offset=direct
+#pragma HLS interface port=schedule_p m_axi offset=direct
+#endif
+#endif
+
+#ifndef DISABLE_PRAGMAS_TOP
+#pragma HLS pipeline
+#endif
+
   state_t state;
-  memcpy(&state, input, 16);
+  uint8_t schedule[176];
+
+#ifndef DISABLE_PRAGMAS_RESHAPE
+#pragma HLS array_reshape variable=input complete
+#pragma HLS array_reshape variable=output complete
+#pragma HLS array_reshape variable=schedule_p cyclic factor=16
+#pragma HLS array_reshape variable=schedule cyclic factor=16
+#endif
+
+  memcpy(state, input, 16);
+  memcpy(schedule, schedule_p, 176);
 
   // The next function call encrypts the PlainText with the Key using AES algorithm.
   Cipher(&state, schedule, 10);
 
-  memcpy(output, &state, 16);
+  memcpy(output, state, 16);
 }
 
 
@@ -335,3 +405,66 @@ void aes256_enc_c(const uint8_t* input, const uint8_t* schedule, uint8_t* output
   // The next function call encrypts the PlainText with the Key using AES algorithm.
   Cipher(state, schedule, 14);
 }
+
+#ifndef DISABLE_NEW_TOP
+void load_schedule(const uint8_t in[176], uint8_t out[176]) {
+    for(int i = 0; i < 176; ++i)
+#pragma HLS unroll factor=16
+#pragma HLS pipeline
+        out[i] = in[i];
+}
+
+void process(const uint8_t input[BLOCK_BYTES], const size_t input_len, const uint8_t schedule[176], uint8_t output[BLOCK_BYTES]) {
+    state_t state;
+    for (size_t block = 0; block < input_len/16; ++block) {
+#pragma HLS loop_tripcount min=1 avg=472
+#pragma HLS pipeline
+        for(int i = 0; i < 4; ++i)
+            for(int j = 0; j < 4; ++j)
+                state[i][j] = input[block*16 + 4*i +j];
+
+        Cipher(&state, schedule, 10);
+
+        for(int i = 0; i < 4; ++i)
+            for(int j = 0; j < 4; ++j)
+                output[block*16 + 4*i +j] = state[i][j];
+    }
+}
+
+#ifndef DISABLE_SDS_INTERFACE
+#pragma SDS data access_pattern(plaintext:SEQUENTIAL, ciphertext:SEQUENTIAL)
+#pragma SDS data mem_attribute(plaintext:PHYSICAL_CONTIGUOUS, schedule_p:PHYSICAL_CONTIGUOUS, ciphertext:PHYSICAL_CONTIGUOUS)
+//#pragma SDS data buffer_depth(plaintext:8192, ciphertext:8192)
+#pragma SDS data copy(plaintext[0:plaintext_len], schedule_p, ciphertext[0:plaintext_len])
+//#pragma SDS data sys_port(plaintext:ps7_S_AXI_HP0, ciphertext:ps7_S_AXI_HP1)
+#pragma SDS data data_mover(plaintext:FASTDMA, ciphertext:FASTDMA)
+void aes128_enc_hw(const uint8_t *plaintext, const size_t plaintext_len, const uint8_t schedule_p[176], uint8_t *ciphertext) {
+#else
+//#pragma SDS data mem_attribute(plaintext:PHYSICAL_CONTIGUOUS, schedule_p:PHYSICAL_CONTIGUOUS, ciphertext:PHYSICAL_CONTIGUOUS)
+void aes128_enc_hw(const uint8_t plaintext[BLOCK_BYTES], const size_t plaintext_len, const uint8_t schedule_p[176], uint8_t ciphertext[BLOCK_BYTES]) {
+#pragma HLS interface port=plaintext m_axi offset=slave bundle=PLAINTEXT
+#pragma HLS interface port=ciphertext m_axi offset=slave bundle=CIPHERTEXT
+#pragma HLS interface port=schedule_p m_axi offset=slave bundle=KEY
+#pragma HLS interface port=plaintext_len s_axilite
+#pragma HLS interface port=return s_axilite
+
+#pragma HLS array_reshape variable=plaintext cyclic factor=16
+#pragma HLS array_reshape variable=ciphertext cyclic factor=16
+#endif
+
+#pragma HLS array_reshape variable=schedule_p block factor=16
+
+#ifndef DISABLE_TOP_DATAFLOW
+#pragma HLS dataflow
+#endif
+
+    uint8_t schedule[176];
+#pragma HLS array_reshape variable=schedule block factor=16
+
+    load_schedule(schedule_p, schedule);
+    process(plaintext, plaintext_len, schedule, ciphertext);
+
+
+}
+
+#endif
