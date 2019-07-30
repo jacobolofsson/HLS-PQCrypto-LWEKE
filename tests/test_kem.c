@@ -4,8 +4,13 @@
 * Abstract: benchmarking/testing KEM scheme
 *********************************************************************************************/
 
+#ifdef __SDSCC__
+#define KEM_TEST_ITERATIONS 10
+#define KEM_BENCH_SECONDS   30
+#else
 #define KEM_TEST_ITERATIONS 1
 #define KEM_BENCH_SECONDS     0
+#endif
 
 
 static int kem_test(const char *named_parameters, int iterations) 
